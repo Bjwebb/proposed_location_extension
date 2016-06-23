@@ -71,7 +71,7 @@ Below is an example of a geolocated item:
                 "amount": 10000
             }
         },
-        "quantity": "10"
+        "quantity": 10
     }
 ]
 ```
