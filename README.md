@@ -1,139 +1,113 @@
-OCDS Extension Template Repository
-==================================
+# Location Data
 
-This repository has two purposes:
+Communicating the location of proposed or executed contract delivery is important to make users of contracting data. 
 
- *  To give a template of an extension that people can base their own on.
- *  To give a place for comment and discussion on how extensions should work.
+This extension proposes the addition of two properties to ```items``` to describe location:
 
-The structure of the extension repository should look like:
+* ```deliveryAddress``` - a standard ```Address``` block which can be used to provide a postal address where services should be delivered.
+* ```deliveryLocation``` - a new block consisting of GeoJSON and Gazetteer entries to describe a wider range of locations to which the contract line item relates.
 
-```
-├── README.md (a full description of the extension in markdown - required)
-├── extension.json (a json file giving metadata about the extension - required)
-├── release-schema.json (json merge patch of release-schema.json)
-├── record-package-schema.json (json merge patch of record-package-schema.json)
-├── release-package-schema.json (json merge patch of release-package-schema.json)
-├── versioned-release-validation-schema.json (json merge patch of versioned-release-validation-schema.json)
-├── codelists 
-│   ├── emptyCodelist.csv (A new codelist)
-│   └── awardCriteria.csv (This will overwrite the existing codelist)
-├── docs (more in depth documentation if required)
-│   └── index.md
-├── tests (tests to run against the schema)
-│   └──
-└── tools (tools to help)
-    └── 
-```
+It also creates a new gazetteer codelist, currently contained in codelist_usecase2.csv.
 
-It copies its layout from the core [standards repository](https://github.com/open-contracting/standard/tree/1.0/standard/schema) and that can be a useful reference when developing an extension.
+**Advantages of this approach**
 
+* It captures a wide range of possible location specifications, including point locations, polygons and lines (useful for roads projects, extractives concessions etc.)
+* Delivery Address information provides information that can be used for both geocoding, and for logistics fulfilment;
+* It allows different locations to be specified for different line items;
 
-extension.json
---------------
+**Disadvantages/limitations of this approach**
 
-This file is required and it gives any automated tools information about the extension.
+* Locations are only specified for ```items```, not at the overall tender, contract or award level. In some cases this may lead either to location data being duplicated across items, or ambiguity about which item the location information should apply to;
+* We have to maintain a codelist of recognised Gazetteers;
 
-[An example of this file can be found in this repository](https://github.com/open-contracting/standard_extension_template/blob/master/extension.json) 
+**Background** 
 
-### required fields
+There are a number of use cases that demand specifying a location for delivery of an item. Discussion can be found in [Issue 26](https://github.com/open-contracting/standard/issues/26).
 
-* name (Name of extension)
-* description (Description of extension)
+**Questions**
 
-### optional fields
-
-* compatibility (A semver description of what version of the core standard the extension in compatible with e.g >=1.0)
-* dependencies (A list of other extensions that this extension depends on)
+* Should we allow location to also be attached to other elements aside from items? 
 
 
-How the extensions work
------------------------
+Schema patch
+============
 
-In the core repository as of OCDS version 1.0.1 there are the following 4 schema files.
+The JSON Patch to add location data to the schema can be found in schema_usecase_2.json.
 
-* release-schema.json
-* record-package-schema.json
-* release-package-schema.json
-* versioned-release-validation-schema.json
+Example usage
+=============
 
-In the extension some or all of these files can be used to do a JSON Merge Patch of the corresponding file.
+Below is an example of a geolocated item:
 
-A JSON merge patch is described by this [rfc](https://tools.ietf.org/html/rfc7386).
-
-The patches are very simple. They just copy the same structure from the core schema and allow you add your extra fields or update existing fields just in the places the extension wants to change the schema. 
-
-Here are some simple examples of how this works. They are illistrative, any changes to existing fields should respect the [Conformance documentation](http://standard.open-contracting.org/latest/en/schema/conformance_and_extensions/).
-
-They all are examples of what could go in release-schema.json files in an extension.
-
-Add a new field "newField" to the release.
-```
-{"properties": 
-  {"newField": {
-     "title": "New field",
-     "description": "A new field",
-     "type": "string"}
-  }
-}
-```
-
-Add a new field "newOrgField" to the organization definition.
-```
-{"definitions":
-  {"Oranization": 
-    {"newOrgField": {
-       "title": "New Org field",
-       "description": "A new field",
-       "type": "string"}
+```json
+"items": [
+    {
+        "id": "item1",
+        "description": "Ceremonial Trumpets for Oxford Town Hall",
+        "classification": {
+            "description": "Trumpets",
+            "scheme": "CPV",
+            "id": "37312100",
+            "uri": "http://purl.org/cpv/2008/code-37312100"
+        },
+        "deliveryLocation": {
+            "geometry": {
+                "type": "Point",
+                "coordinates": [51.751944, -1.257778]
+            },
+            "gazetteer": {
+                "scheme": "GEONAMES",
+                "identifiers": ["2640729"]
+            },
+            "description": "Central Oxford",
+            "uri": "http://www.geonames.org/2640729/oxford.html"
+        },
+        "deliveryAddress": {
+            "postalCode": "OX1 1BX",
+            "countryName": "United Kingdom",
+            "streetAddress": "Town Hall, St Aldate's",
+            "region": "Oxfordshire",
+            "locality": "Oxford"
+        },
+        "unit": {
+            "name": "Items",
+            "value": {
+                "currency": "GBP",
+                "amount": 10000
+            }
+        },
+        "quantity": "10"
     }
-  }
-}
+]
 ```
 
-To update the description of the planning phase. 
-```
-{"properties": 
-    {"planning": 
-        {"description": "Information from the planning phase of the contracting process. This may include detailed budgets broken down by year (supported by the budgets extension).”}
-    }
-}
-```
-
-Remove whole planning section. Putting in null will remove the key associated with it.
-```
-{
- "properties":
-   {"planning": null}
- "definitions":
-   {"Planning": null}
-}
-```
-
-
-Leave the core release-schema.json untouched and not do any update to it.
-```
-{}
-```
-
-
-Best practice
--------------
-
-It is possible to copy the whole of the schemas from the core, change them and as long as you have only added or changed properties the extension will work as expected. However doing it this way will mean that it will be hard to see what changes are made and will be much harder to track changes of the core schema (as every change in the core schema will need to be copied).  
-
-So it is best practice to just put in an extension the minimal changes that are required. However, it can be useful to work with the whole schema when developing an extension. In this case use the [json merge patch library](https://github.com/open-contracting/json-merge-patch) and it will generate the minimal patch for you by using the command line tool.
+If the procurement related to the rebuilding of a road, then the item could also specify more complex geometries such as:
 
 ```
-json-merge-patch create-patch core_schema.json new_modified_schema.json -o minimal_patch.json
+"deliveryLocation": {
+    "geometry": {
+        "type": "LineString",
+        "coordinates": [ [ -1.256503402048622, 51.747792026616821 ], [ -1.256477837243949, 51.747500168748303 ], [ -1.256466773131763, 51.747365723021403 ], [ -1.256471969911729, 51.747246699996332 ], [ -1.256481860557471, 51.747182243160943 ], [ -1.256497618535434, 51.747079648666102 ] ]
+    },
+    "gazetteer": {
+        "scheme": "OSMW",
+        "identifiers": ["27895985"]
+    },
+    "description": "St Aldate's",
+    "uri": "http://www.geonames.org/2640729/oxford.html"
+},
 ```
 
-You can also test your extension by:
-
-```
-json-merge-patch merge core_schema.json your_extension.json -o expected_output.json
-
-```
+You can take the contents of the geometry object, excluding the ```geometry``` keyword, and plug this into any GeoJSON tool to see the shape that is described. 
 
 
+Alternative model (Use case 1)
+==========
+An earlier simple proposed extension is covered in schema_usecase_1.json.
 
+> The Department of Health may wish to purchase 10 medical devices for 10 separate hospitals in Australia.
+>
+> These items are all part of a single contracting process as the same supplier is expected to deliver all 10 units, but 
+we wish to express the location of the seperate hospital to which the items are to be delivered.
+
+See schema_usecase_1.json

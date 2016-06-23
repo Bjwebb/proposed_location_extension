@@ -1,6 +1,4 @@
 {
-  "name": "Name of extension (required)",
-  "description": "A brief description of what this extension does, this will be pulled into the main docs as a link (required)",
-  "compatibility": ">=1.0.0",
-  "dependencies": ["http://path.to.other.extension"]
+  "name": "Location",
+  "description": "Communicates the location of proposed or executed contract delivery."
 }
